@@ -36,6 +36,7 @@ tests/
   unit/                testes unitários (regras puras: busca, formatação, constantes...)
   integration/         Server Actions, middleware e data.ts com Supabase simulado
   e2e/                 fluxos do usuário no navegador (Playwright)
+  performance/         teste de carga: latência, volume e erros
   helpers/             dublê do client Supabase e utilitários
 ```
 
@@ -67,6 +68,7 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | `npm run test:integration` | Só os testes de integração |
 | `npm run test:watch` | Vitest em modo observação |
 | `npm run test:e2e` | Testes E2E no navegador (Playwright) |
+| `npm run test:perf` | Teste de performance (servidor precisa estar no ar) |
 
 ## Testes automatizados
 
@@ -75,6 +77,7 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | Unitários | Vitest | `src/**/*.test.ts`, `tests/unit/` | Funções e regras de negócio isoladas: filtros, ordenação e paginação da busca, `timeAgo`, rótulos por tipo de mídia, média de notas, permissão de campanha, cliente HTTP das APIs externas |
 | Integração | Vitest | `tests/integration/` | Comunicação entre camadas: Server Actions ↔ Supabase (simulado) ↔ cache/redirect do Next, middleware ↔ sessão, painel admin ↔ AniList/TMDB ↔ catálogo, catálogo demo ↔ busca |
 | E2E | Playwright | `tests/e2e/` | Fluxos do usuário no navegador: home, busca pela barra do topo, filtros, ordenação, paginação, login/cadastro, campanhas, 404 |
+| Performance | Script Node (sem dependências) | `tests/performance/` | Latência (p50/p95/p99), volume (req/s) e taxa de erros sob carga, com limites que reprovam a CI |
 
 ```bash
 # Unitários + integração (não precisam de Supabase nem de rede)
@@ -84,17 +87,31 @@ npm test
 npx playwright install chromium   # só na primeira vez
 npm run build
 npm run test:e2e                  # sobe o servidor sozinho; relatório em playwright-report/
+
+# Performance: com o servidor de produção rodando em outro terminal (npm run start)
+npm run test:perf                       # perfil "load": 10 conexões por 30 s
+PERF_PROFILE=smoke npm run test:perf    # 1 conexão por 10 s
+PERF_PROFILE=stress npm run test:perf   # 50 conexões por 30 s
 ```
 
 Os testes de integração usam um dublê do client Supabase (`tests/helpers/supabase.ts`) que registra as consultas enviadas ao banco; só o banco e a rede são simulados, o restante do código roda de verdade.
 
-> **Por que os E2E usam o modo demonstração?** Sem `NEXT_PUBLIC_SUPABASE_*` no build, o app usa o catálogo de demonstração: os dados são sempre os mesmos (testes previsíveis) e nenhum banco real é alterado. Se o seu `.env.local` tiver as chaves do Supabase, renomeie-o temporariamente antes do `npm run build` para rodar os E2E localmente. Para testar um servidor já publicado (ex.: preview da Vercel), use `E2E_BASE_URL=https://... npm run test:e2e`.
+> **Por que E2E e performance usam o modo demonstração?** Sem `NEXT_PUBLIC_SUPABASE_*` no build, o app usa o catálogo de demonstração: os dados são sempre os mesmos (testes previsíveis) e nenhum banco real é alterado. Se o seu `.env.local` tiver as chaves do Supabase, renomeie-o temporariamente antes do `npm run build` para rodar os E2E localmente. Para testar um servidor já publicado (ex.: preview da Vercel), use `E2E_BASE_URL=https://... npm run test:e2e`.
+
+Limites do teste de performance (configuráveis por variável de ambiente, veja o cabeçalho de `tests/performance/load-test.mjs`):
+
+| Perfil | Conexões | Duração | p95 máximo | Erros máximos | Vazão mínima |
+| --- | --- | --- | --- | --- | --- |
+| smoke | 1 | 10 s | 800 ms | 0% | — |
+| load | 10 | 30 s | 1500 ms | 1% | 5 req/s |
+| stress | 50 | 30 s | 4000 ms | 5% | — |
 
 ## CI/CD
 
 - `.github/workflows/ci.yml`, a cada push/PR:
   1. **build-and-test**: lint, typecheck, testes unitários, testes de integração e build.
   2. **e2e** (depois do 1): instala o Chromium, faz o build em modo demonstração e roda o Playwright; o relatório HTML fica nos *artifacts* da execução.
+  3. **performance** (depois do 1, em paralelo com o 2): sobe o servidor de produção e roda os perfis *smoke* e *load*; o resumo aparece na aba *Summary* e o JSON nos *artifacts*.
 - Deploy: importe o repositório na Vercel e defina as variáveis de ambiente. Cada PR gera um preview; `main` publica em produção.
 
 ## Segurança
@@ -105,7 +122,8 @@ Os testes de integração usam um dublê do client Supabase (`tests/helpers/supa
 ## Próximos passos
 
 - Itens de lista (adicionar obras às listas)
-- Testes de performance e monitoramento
+- Monitoramento em produção (logs/erros e métricas da Vercel)
+- Testes de RLS contra um Supabase local (`supabase start`)
 - Adicionar obras às listas (botão na página da obra)
 - Trocar os ícones por SVGs exportados do Figma e usar as capas reais
 

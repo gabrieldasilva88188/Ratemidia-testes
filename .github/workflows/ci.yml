@@ -88,5 +88,57 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  # 3) Testes de performance: latência (p95), volume (req/s) e taxa de erros.
+  performance:
+    name: Testes de performance
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build (modo demonstração)
+        run: npm run build
+
+      - name: Subir servidor de produção
+        run: |
+          npm run start > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null "$BASE_URL" && echo "Servidor no ar" && exit 0
+            sleep 1
+          done
+          echo "Servidor não respondeu"; cat server.log; exit 1
+
+      - name: Smoke (1 conexão)
+        run: npm run test:perf
+        env:
+          PERF_PROFILE: smoke
+
+      - name: Carga (10 conexões)
+        run: npm run test:perf
+        env:
+          PERF_PROFILE: load
+
+      - name: Publicar resultados
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: |
+            tests/performance/results/
+            server.log
+          retention-days: 14
+
 # Deploy: a Vercel faz o deploy automático ao conectar este repositório
 # (previews em Pull Requests e produção na branch main).
