@@ -16,7 +16,7 @@ concurrency:
 jobs:
   # Qualidade + testes + build
   build-and-test:
-    name: Lint, tipos, unitários e build
+    name: Lint, tipos, unitários, integração e build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +37,9 @@ jobs:
 
       - name: Testes unitários
         run: npm run test:unit
+
+      - name: Testes de integração
+        run: npm run test:integration
 
       - name: Build
         run: npm run build

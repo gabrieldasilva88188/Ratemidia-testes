@@ -34,6 +34,8 @@ supabase/
   migrations/002_telas_busca_perfil_admin.sql gêneros, status editorial, perfil, RLS admin
 tests/
   unit/                testes unitários (regras puras: busca, formatação, constantes...)
+  integration/         Server Actions, middleware e data.ts com Supabase simulado
+  helpers/             dublê do client Supabase e utilitários
 ```
 
 ## Rodando localmente
@@ -59,8 +61,9 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | `npm run build` | Build de produção |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript |
-| `npm test` | Todos os testes do Vitest (unitários) |
+| `npm test` | Todos os testes do Vitest (unitários + integração) |
 | `npm run test:unit` | Só os testes unitários |
+| `npm run test:integration` | Só os testes de integração |
 | `npm run test:watch` | Vitest em modo observação |
 
 ## Testes automatizados
@@ -68,15 +71,18 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | Tipo | Ferramenta | Onde | O que valida |
 | --- | --- | --- | --- |
 | Unitários | Vitest | `src/**/*.test.ts`, `tests/unit/` | Funções e regras de negócio isoladas: filtros, ordenação e paginação da busca, `timeAgo`, rótulos por tipo de mídia, média de notas, permissão de campanha, cliente HTTP das APIs externas |
+| Integração | Vitest | `tests/integration/` | Comunicação entre camadas: Server Actions ↔ Supabase (simulado) ↔ cache/redirect do Next, middleware ↔ sessão, painel admin ↔ AniList/TMDB ↔ catálogo, catálogo demo ↔ busca |
 
 ```bash
-# Unitários (não precisam de Supabase nem de rede)
+# Unitários + integração (não precisam de Supabase nem de rede)
 npm test
 ```
 
+Os testes de integração usam um dublê do client Supabase (`tests/helpers/supabase.ts`) que registra as consultas enviadas ao banco; só o banco e a rede são simulados, o restante do código roda de verdade.
+
 ## CI/CD
 
-- `.github/workflows/ci.yml`: instala dependências, lint, typecheck, testes unitários e build a cada push/PR.
+- `.github/workflows/ci.yml`: instala dependências, lint, typecheck, testes unitários, testes de integração e build a cada push/PR.
 - Deploy: importe o repositório na Vercel e defina as variáveis de ambiente. Cada PR gera um preview; `main` publica em produção.
 
 ## Segurança
@@ -87,7 +93,7 @@ npm test
 ## Próximos passos
 
 - Itens de lista (adicionar obras às listas)
-- Testes de integração, E2E e monitoramento
+- Testes E2E e monitoramento
 - Adicionar obras às listas (botão na página da obra)
 - Trocar os ícones por SVGs exportados do Figma e usar as capas reais
 
