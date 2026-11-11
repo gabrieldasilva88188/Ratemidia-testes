@@ -12,3 +12,7 @@ coverage
 
 # Testes e relatórios (não fazem parte da imagem)
 tests
+playwright.config.ts
+playwright-report
+test-results
+blob-report

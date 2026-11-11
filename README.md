@@ -35,6 +35,7 @@ supabase/
 tests/
   unit/                testes unitários (regras puras: busca, formatação, constantes...)
   integration/         Server Actions, middleware e data.ts com Supabase simulado
+  e2e/                 fluxos do usuário no navegador (Playwright)
   helpers/             dublê do client Supabase e utilitários
 ```
 
@@ -65,6 +66,7 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | `npm run test:unit` | Só os testes unitários |
 | `npm run test:integration` | Só os testes de integração |
 | `npm run test:watch` | Vitest em modo observação |
+| `npm run test:e2e` | Testes E2E no navegador (Playwright) |
 
 ## Testes automatizados
 
@@ -72,17 +74,27 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | --- | --- | --- | --- |
 | Unitários | Vitest | `src/**/*.test.ts`, `tests/unit/` | Funções e regras de negócio isoladas: filtros, ordenação e paginação da busca, `timeAgo`, rótulos por tipo de mídia, média de notas, permissão de campanha, cliente HTTP das APIs externas |
 | Integração | Vitest | `tests/integration/` | Comunicação entre camadas: Server Actions ↔ Supabase (simulado) ↔ cache/redirect do Next, middleware ↔ sessão, painel admin ↔ AniList/TMDB ↔ catálogo, catálogo demo ↔ busca |
+| E2E | Playwright | `tests/e2e/` | Fluxos do usuário no navegador: home, busca pela barra do topo, filtros, ordenação, paginação, login/cadastro, campanhas, 404 |
 
 ```bash
 # Unitários + integração (não precisam de Supabase nem de rede)
 npm test
+
+# E2E: build em modo demonstração (sem as variáveis do Supabase) e depois os testes
+npx playwright install chromium   # só na primeira vez
+npm run build
+npm run test:e2e                  # sobe o servidor sozinho; relatório em playwright-report/
 ```
 
 Os testes de integração usam um dublê do client Supabase (`tests/helpers/supabase.ts`) que registra as consultas enviadas ao banco; só o banco e a rede são simulados, o restante do código roda de verdade.
 
+> **Por que os E2E usam o modo demonstração?** Sem `NEXT_PUBLIC_SUPABASE_*` no build, o app usa o catálogo de demonstração: os dados são sempre os mesmos (testes previsíveis) e nenhum banco real é alterado. Se o seu `.env.local` tiver as chaves do Supabase, renomeie-o temporariamente antes do `npm run build` para rodar os E2E localmente. Para testar um servidor já publicado (ex.: preview da Vercel), use `E2E_BASE_URL=https://... npm run test:e2e`.
+
 ## CI/CD
 
-- `.github/workflows/ci.yml`: instala dependências, lint, typecheck, testes unitários, testes de integração e build a cada push/PR.
+- `.github/workflows/ci.yml`, a cada push/PR:
+  1. **build-and-test**: lint, typecheck, testes unitários, testes de integração e build.
+  2. **e2e** (depois do 1): instala o Chromium, faz o build em modo demonstração e roda o Playwright; o relatório HTML fica nos *artifacts* da execução.
 - Deploy: importe o repositório na Vercel e defina as variáveis de ambiente. Cada PR gera um preview; `main` publica em produção.
 
 ## Segurança
@@ -93,7 +105,7 @@ Os testes de integração usam um dublê do client Supabase (`tests/helpers/supa
 ## Próximos passos
 
 - Itens de lista (adicionar obras às listas)
-- Testes E2E e monitoramento
+- Testes de performance e monitoramento
 - Adicionar obras às listas (botão na página da obra)
 - Trocar os ícones por SVGs exportados do Figma e usar as capas reais
 

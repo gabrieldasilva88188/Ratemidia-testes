@@ -8,3 +8,8 @@ out
 next-env.d.ts
 *.tsbuildinfo
 coverage
+
+# Relatórios de testes
+playwright-report
+test-results
+blob-report
