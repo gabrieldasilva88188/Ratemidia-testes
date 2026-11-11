@@ -9,3 +9,6 @@ coverage
 !.env.example
 !.env.docker.example
 .vercel
+
+# Testes e relatórios (não fazem parte da imagem)
+tests

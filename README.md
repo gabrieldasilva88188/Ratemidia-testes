@@ -32,6 +32,8 @@ src/
 supabase/
   schema.sql                                  tabelas, enums, triggers e RLS
   migrations/002_telas_busca_perfil_admin.sql gêneros, status editorial, perfil, RLS admin
+tests/
+  unit/                testes unitários (regras puras: busca, formatação, constantes...)
 ```
 
 ## Rodando localmente
@@ -57,11 +59,24 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 | `npm run build` | Build de produção |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript |
-| `npm test` | Testes (Vitest) |
+| `npm test` | Todos os testes do Vitest (unitários) |
+| `npm run test:unit` | Só os testes unitários |
+| `npm run test:watch` | Vitest em modo observação |
+
+## Testes automatizados
+
+| Tipo | Ferramenta | Onde | O que valida |
+| --- | --- | --- | --- |
+| Unitários | Vitest | `src/**/*.test.ts`, `tests/unit/` | Funções e regras de negócio isoladas: filtros, ordenação e paginação da busca, `timeAgo`, rótulos por tipo de mídia, média de notas, permissão de campanha, cliente HTTP das APIs externas |
+
+```bash
+# Unitários (não precisam de Supabase nem de rede)
+npm test
+```
 
 ## CI/CD
 
-- `.github/workflows/ci.yml`: instala dependências, lint, typecheck, testes e build a cada push/PR.
+- `.github/workflows/ci.yml`: instala dependências, lint, typecheck, testes unitários e build a cada push/PR.
 - Deploy: importe o repositório na Vercel e defina as variáveis de ambiente. Cada PR gera um preview; `main` publica em produção.
 
 ## Segurança
@@ -72,7 +87,7 @@ update profiles set role = 'admin' where username = 'seu_usuario';
 ## Próximos passos
 
 - Itens de lista (adicionar obras às listas)
-- Testes E2E e monitoramento
+- Testes de integração, E2E e monitoramento
 - Adicionar obras às listas (botão na página da obra)
 - Trocar os ícones por SVGs exportados do Figma e usar as capas reais
 
